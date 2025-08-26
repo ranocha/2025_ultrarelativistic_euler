@@ -1,0 +1,18 @@
+{
+    "license": "MIT",
+    "title": "Reproducibility repository for Computing Radially-Symmetric Solutions of the Ultra-Relativistic Euler Equations with Entropy-Stable Discontinuous Galerkin Methods",
+    "upload_type": "software",
+    "creators": [
+        {
+            "affiliation": "Institute of Mathematics, Johannes Gutenberg University Mainz, Germany",
+            "name": "Thein, Ferdinand",
+            "orcid": "0000-0002-0170-8284"
+        },
+        {
+            "affiliation": "Institute of Mathematics, Johannes Gutenberg University Mainz, Germany",
+            "name": "Ranocha, Hendrik",
+            "orcid": "0000-0002-3456-2277"
+        }
+    ],
+    "access_right": "open"
+}
