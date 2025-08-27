@@ -59,6 +59,12 @@ or by downloading an archive via the GitHub interface. Then, you need to start
 Julia in the `code` directory of this repository and follow the instructions
 described in the `README.md` file therein.
 
+The reference data files used to create the figures in the article are stored
+using GitHub's large file storage (LFS). To access them, you need to install
+[Git LFS](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)
+appropriately before cloning this repository. All steps required to create
+the figures of the article are described in the `visualization` directory.
+
 
 ## Authors
 
