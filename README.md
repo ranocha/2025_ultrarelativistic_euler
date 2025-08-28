@@ -64,7 +64,7 @@ using GitHub's large file storage (LFS). To access them, you need to install
 [Git LFS](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)
 appropriately before cloning this repository. All steps required to create
 the figures of the article are described in the `visualization` directory.
-The figures have been created using MATLAB TODO.
+The figures have been created using MATLAB R2024a (24.1.0.2653294, Update 5).
 
 
 ## Authors
