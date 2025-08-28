@@ -1,7 +1,7 @@
 # Computing Radially-Symmetric Solutions of the Ultra-Relativistic Euler Equations with Entropy-Stable Discontinuous Galerkin Methods
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/DOI/TODO.svg)](https://doi.org/TODO)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16989160.svg)](https://doi.org/10.5281/zenodo.16989160)
 
 This repository contains information and code to reproduce the results presented in the
 article
@@ -30,7 +30,7 @@ use the implementations provided here, please **also** cite this repository as
   author={Thein, Ferdinand and Ranocha, Hendrik},
   year={2025},
   howpublished={\url{https://github.com/ranocha/2025_ultrarelativistic_euler}},
-  doi={TODO}
+  doi={10.5281/zenodo.16989160}
 }
 ```
 
