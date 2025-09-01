@@ -12,8 +12,8 @@ article
          Discontinuous {G}alerkin Methods},
   author={Thein, Ferdinand and Ranocha, Hendrik},
   year={2025},
-  month={TODO},
-  eprint={TODO},
+  month={09},
+  eprint={2508.21427},
   eprinttype={arxiv},
   eprintclass={math.NA}
 }
