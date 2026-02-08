@@ -87,7 +87,7 @@ julia> @time save_check_ec_2d()
 [...]
   0.979400 seconds (2.08 M allocations: 193.298 MiB, 6.47% gc time, 59.18% compilation time)
 
-julia> @time check_ec_3d()
+julia> @time save_check_ec_3d()
 [...]
  11.517281 seconds (2.54 M allocations: 1.762 GiB, 1.19% gc time, 5.15% compilation time)
 
@@ -229,6 +229,35 @@ Afterward, you can visualize the results using the following commands:
 julia> include("visualization/visualization.jl")
 
 julia> plot_expansion_spherical_bubble_3d(joinpath("data", "expansion_spherical_bubble_P4estMesh3D_3_5_9.h5"))
+
+```
+
+
+### Check entropy stability
+
+First, you can run the numerical simulations as follows:
+
+```julia
+julia> include("code/code.jl")
+
+julia> @time save_check_es_2d()
+[...]
+  0.650857 seconds (2.05 M allocations: 139.230 MiB, 78.30% compilation time)
+
+julia> @time save_check_es_3d()
+[...]
+ 15.393410 seconds (719.30 k allocations: 1.623 GiB, 0.15% gc time, 0.44% compilation time: 100% of which was recompilation)
+
+```
+
+Afterward, you can visualize the results using the following commands:
+
+```julia
+julia> include("visualization/visualization.jl")
+
+julia> plot_check_es(joinpath("data", "entropy_stability_test_P4estMesh2D.h5"))
+
+julia> plot_check_es(joinpath("data", "entropy_stability_test_P4estMesh3D.h5"))
 
 ```
 

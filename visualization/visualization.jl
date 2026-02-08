@@ -228,6 +228,26 @@ function plot_expansion_spherical_bubble_3d(filename)
 end
 
 
+# Similar setup as Example 3 of Kunik, Kolb, Müller, and Thein (2024),
+# to check entropy stability
+function plot_check_es(filename)
+    t, entropy = h5open(filename, "r") do file
+        read(file["time"]), read(file["entropy"])
+    end
+
+    fig = Figure()
+    ax = Axis(fig[1, 1]; xlabel = L"Time $t$", ylabel = L"Total entropy $\int \eta$")
+    lines!(ax, t, entropy)
+    @show extrema(entropy)
+
+    figname = joinpath(DATA_DIR, (filename |> basename |> splitext |> first) * ".png")
+    save(figname, fig, px_per_unit = 3)
+    @info "Figure saved" figname
+
+    return fig
+end
+
+
 ###########################################################
 # Example 4 of Kunik, Kolb, Müller, and Thein (2024)
 function plot_collapse_spherical_bubble_2d(filename)

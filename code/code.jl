@@ -169,6 +169,19 @@ end
     return lambda_1, lambda_2
 end
 
+@inline function Trixi.entropy(u,
+                               equations::UltraRelativisticEulerEquations2D)
+    v1, v2, p = cons2prim(u, equations)
+
+    # compute the fourth root ("tessaract root") of the pressure
+    sqrt_p = sqrt(p)
+    tert_p = sqrt(sqrt_p)
+
+    # Note that the physical entropy eta is concave
+    eta = tert_p^3 * sqrt(1 + v1^2 + v2^2)
+    return eta
+end
+
 # Convert conservative variables to entropy variables
 @inline function Trixi.cons2entropy(u,
                                     equations::UltraRelativisticEulerEquations2D)
@@ -465,6 +478,19 @@ end
     lambda_3 = (2 * v3^2 + sqrt(2 * (v1^2 + v2^2) + 3)) / denom
 
     return lambda_1, lambda_2, lambda_3
+end
+
+@inline function Trixi.entropy(u,
+                               equations::UltraRelativisticEulerEquations3D)
+    v1, v2, v3, p = cons2prim(u, equations)
+
+    # compute the fourth root ("tessaract root") of the pressure
+    sqrt_p = sqrt(p)
+    tert_p = sqrt(sqrt_p)
+
+    # Note that the physical entropy eta is concave
+    eta = tert_p^3 * sqrt(1 + v1^2 + v2^2 + v3^2)
+    return eta
 end
 
 # Convert conservative variables to entropy variables
@@ -1526,6 +1552,174 @@ function save_expansion_spherical_bubble_3d(; base_level = 3,
         file["radius"] = data_r
         file["velocity"] = reshape(data_v, length(data_r), length(data_t))
         file["pressure"] = reshape(data_p, length(data_r), length(data_t))
+    end
+    @info "Results saved" filename
+
+    return filename
+end
+
+
+# Similar setup as Example 3 of Kunik, Kolb, Müller, and Thein (2024)
+# to check entropy stability
+function save_check_es_2d(; initial_refinement_level = 5,
+                            MeshType = P4estMesh)
+    equations = UltraRelativisticEulerEquations2D()
+
+    function initial_condition(x, t, equations::UltraRelativisticEulerEquations2D)
+        if norm(x) <= 1
+            p = 1.0
+        else
+            p = 0.1
+        end
+        v = zero(x)
+        return prim2cons(SVector(v..., p), equations)
+    end
+
+    coordinates_min = (-6.0, -6.0)
+    coordinates_max = (+6.0, +6.0)
+    if MeshType === TreeMesh
+        mesh = TreeMesh(coordinates_min, coordinates_max;
+                        initial_refinement_level,
+                        n_cells_max = 10^5,
+                        periodicity = true)
+    else # P4estMesh, T8codeMesh
+        mesh = MeshType((1, 1); polydeg = 1,
+                        coordinates_min, coordinates_max,
+                        initial_refinement_level,
+                        periodicity = true)
+    end
+
+    surface_flux = flux_lax_friedrichs
+    volume_flux = flux_thein_ranocha
+    basis = LobattoLegendreBasis(3)
+    indicator_sc = IndicatorHennemannGassner(equations, basis,
+                                             alpha_max = 0.5,
+                                             alpha_min = 0.001,
+                                             alpha_smooth = true,
+                                             variable = pressure_velocity)
+    volume_integral = VolumeIntegralShockCapturingHG(indicator_sc;
+                                                     volume_flux_dg = volume_flux,
+                                                     volume_flux_fv = surface_flux)
+    solver = DGSEM(basis, surface_flux, volume_integral)
+
+    semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, solver)
+
+    tspan = (0.0, 6.0)
+    ode = semidiscretize(semi, tspan)
+
+    summary_callback = SummaryCallback()
+    alive_callback = AliveCallback(alive_interval = 100)
+    callbacks = CallbackSet(summary_callback, alive_callback)
+
+    # SSPRK43 with optimized controller of Ranocha, Dalcin, Parsani,
+    # and Ketcheson (2021)
+    integrator = init(ode, SSPRK43(thread = Trixi.True());
+                      controller = PIDController(0.55, -0.27, 0.05),
+                      callback = callbacks, ode_default_options()...)
+
+    # Prepare plotting
+    data_t = Vector{Float64}()
+    data_entropy = Vector{Float64}()
+    du_ode = similar(integrator.u)
+
+    for _ in integrator
+        push!(data_t, integrator.t)
+        Trixi.@trixi_timeit Trixi.timer() "Prepare data for plotting" begin
+            Trixi.rhs!(du_ode, integrator.u, integrator.p, integrator.t)
+            du = Trixi.wrap_array(du_ode, integrator.p)
+            u = Trixi.wrap_array(integrator.u, integrator.p)
+            entropy = Trixi.analyze(Trixi.entropy, du, u, integrator.t, integrator.p)
+            push!(data_entropy, entropy)
+        end
+    end
+
+    filename = joinpath(DATA_DIR, "entropy_stability_test_$(nameof(typeof(mesh)))$(ndims(mesh))D.h5")
+    h5open(filename, "w") do file
+        file["time"] = data_t
+        file["entropy"] = data_entropy
+    end
+    @info "Results saved" filename
+
+    return filename
+end
+
+# Same as above but in 3D
+function save_check_es_3d(; initial_refinement_level = 5,
+                            MeshType = P4estMesh)
+    equations = UltraRelativisticEulerEquations3D()
+
+    function initial_condition(x, t, equations::UltraRelativisticEulerEquations3D)
+        if norm(x) <= 1
+            p = 1.0
+        else
+            p = 0.1
+        end
+        v = zero(x)
+        return prim2cons(SVector(v..., p), equations)
+    end
+
+    coordinates_min = (-6.0, -6.0, -6.0)
+    coordinates_max = (+6.0, +6.0, +6.0)
+    if MeshType === TreeMesh
+        mesh = TreeMesh(coordinates_min, coordinates_max;
+                        initial_refinement_level,
+                        n_cells_max = 10^5,
+                        periodicity = true)
+    else # P4estMesh, T8codeMesh
+        mesh = MeshType((1, 1, 1); polydeg = 1,
+                        coordinates_min, coordinates_max,
+                        initial_refinement_level,
+                        periodicity = true)
+    end
+
+    surface_flux = flux_lax_friedrichs
+    volume_flux = flux_thein_ranocha
+    basis = LobattoLegendreBasis(3)
+    indicator_sc = IndicatorHennemannGassner(equations, basis,
+                                             alpha_max = 0.5,
+                                             alpha_min = 0.001,
+                                             alpha_smooth = true,
+                                             variable = pressure_velocity)
+    volume_integral = VolumeIntegralShockCapturingHG(indicator_sc;
+                                                     volume_flux_dg = volume_flux,
+                                                     volume_flux_fv = surface_flux)
+    solver = DGSEM(basis, surface_flux, volume_integral)
+
+    semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, solver)
+
+    tspan = (0.0, 6.0)
+    ode = semidiscretize(semi, tspan)
+
+    summary_callback = SummaryCallback()
+    alive_callback = AliveCallback(alive_interval = 25)
+    callbacks = CallbackSet(summary_callback, alive_callback)
+
+    # SSPRK43 with optimized controller of Ranocha, Dalcin, Parsani,
+    # and Ketcheson (2021)
+    integrator = init(ode, SSPRK43(thread = Trixi.True());
+                      controller = PIDController(0.55, -0.27, 0.05),
+                      callback = callbacks, ode_default_options()...)
+
+    # Prepare plotting
+    data_t = Vector{Float64}()
+    data_entropy = Vector{Float64}()
+    du_ode = similar(integrator.u)
+
+    for _ in integrator
+        push!(data_t, integrator.t)
+        Trixi.@trixi_timeit Trixi.timer() "Prepare data for plotting" begin
+            Trixi.rhs!(du_ode, integrator.u, integrator.p, integrator.t)
+            du = Trixi.wrap_array(du_ode, integrator.p)
+            u = Trixi.wrap_array(integrator.u, integrator.p)
+            entropy = Trixi.analyze(Trixi.entropy, du, u, integrator.t, integrator.p)
+            push!(data_entropy, entropy)
+        end
+    end
+
+    filename = joinpath(DATA_DIR, "entropy_stability_test_$(nameof(typeof(mesh)))$(ndims(mesh))D.h5")
+    h5open(filename, "w") do file
+        file["time"] = data_t
+        file["entropy"] = data_entropy
     end
     @info "Results saved" filename
 
