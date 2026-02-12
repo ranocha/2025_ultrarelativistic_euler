@@ -18,6 +18,51 @@ The splitting makes it easily possible to run the simulations on a headless serv
 and visualize them on a local machine.
 
 
+## Convergence test
+
+```julia
+julia> include("code/code.jl")
+
+julia> convergence_test_2d()
+┌ Info: Convergence test
+└   refinement_level = 2
+┌ Info: Convergence test
+└   refinement_level = 3
+┌ Info: Convergence test
+└   refinement_level = 4
+┌ Info: Convergence test
+└   refinement_level = 5
+┌ Info: Convergence test
+└   refinement_level = 6
+Level & $L^2$ error $w_1$ & EOC $w_1$ & $L^2$ error $w_2$ & EOC $w_2$ & $L^2$ error $w_3$ & EOC $w_3$ \\
+    2 &   \num{7.52e-03}  &           &   \num{7.52e-03}  &           &   \num{1.10e-02}  &           \\
+    3 &   \num{4.87e-04}  &      3.95 &   \num{4.87e-04}  &      3.95 &   \num{8.51e-04}  &      3.69 \\
+    4 &   \num{3.29e-05}  &      3.89 &   \num{3.29e-05}  &      3.89 &   \num{6.67e-05}  &      3.67 \\
+    5 &   \num{1.93e-06}  &      4.09 &   \num{1.93e-06}  &      4.09 &   \num{3.43e-06}  &      4.28 \\
+    6 &   \num{1.22e-07}  &      3.99 &   \num{1.22e-07}  &      3.99 &   \num{2.30e-07}  &      3.90 \\
+
+julia> convergence_test_3d()
+┌ Info: Convergence test
+└   refinement_level = 2
+┌ Info: Convergence test
+└   refinement_level = 3
+┌ Info: Convergence test
+└   refinement_level = 4
+┌ Info: Convergence test
+└   refinement_level = 5
+┌ Info: Convergence test
+└   refinement_level = 6
+Level & $L^2$ error $w_1$ & EOC $w_1$ & $L^2$ error $w_2$ & EOC $w_2$ & $L^2$ error $w_3$ & EOC $w_3$ & $L^2$ error $w_4$ & EOC $w_4$ \\
+    2 &   \num{6.98e-03}  &           &   \num{6.98e-03}  &           &   \num{6.98e-03}  &           &   \num{1.18e-02}  &           \\
+    3 &   \num{4.78e-04}  &      3.87 &   \num{4.78e-04}  &      3.87 &   \num{4.78e-04}  &      3.87 &   \num{1.00e-03}  &      3.56 \\
+    4 &   \num{3.29e-05}  &      3.86 &   \num{3.29e-05}  &      3.86 &   \num{3.29e-05}  &      3.86 &   \num{7.48e-05}  &      3.74 \\
+    5 &   \num{1.78e-06}  &      4.21 &   \num{1.78e-06}  &      4.21 &   \num{1.78e-06}  &      4.21 &   \num{4.08e-06}  &      4.20 \\
+    6 &   \num{1.14e-07}  &      3.96 &   \num{1.14e-07}  &      3.96 &   \num{1.14e-07}  &      3.96 &   \num{2.48e-07}  &      4.04 \\
+
+```
+
+
+
 ## Example 1: Solutions including a shock and a stationary part
 
 ### 2D version

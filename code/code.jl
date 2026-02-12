@@ -4,6 +4,7 @@ Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
 # Load packages
+using Printf: @printf
 using LinearAlgebra: normalize, norm
 using Test: @test, @testset
 
@@ -665,6 +666,209 @@ function unit_tests_3d()
         end
     end
 end
+end
+
+
+###########################################################
+# Convergence test
+function convergence_test_2d_inner(; refinement_level = 3,
+                                     volume_flux = flux_thein_ranocha,
+                                     MeshType = P4estMesh,
+                                     tol = 1.0e-8)
+    equations = UltraRelativisticEulerEquations2D()
+
+    function initial_condition(x, t, equations::UltraRelativisticEulerEquations2D)
+        p = 2.0 + sin((x[1] + x[2]) - 0.25 * sqrt(10) * t)
+        v = SVector(1, 1) / (2 * sqrt(2))
+        return prim2cons(SVector(v..., p), equations)
+    end
+
+    function source_terms(u, x, t, equations::UltraRelativisticEulerEquations2D)
+        c = cos((x[1] + x[2]) - 0.25 * sqrt(10) * t)
+        s1 = 0.75 * c
+        s2 = s1
+        s4 = 0.0
+        return SVector(s1, s2, s4)
+    end
+
+    coordinates_min = (-1.0, -1.0) .* π
+    coordinates_max = (+1.0, +1.0) .* π
+    if MeshType === TreeMesh
+        mesh = TreeMesh(coordinates_min, coordinates_max;
+                        initial_refinement_level = refinement_level,
+                        n_cells_max = 10^5,
+                        periodicity = true)
+    else # P4estMesh, T8codeMesh
+        mesh = MeshType((1, 1); polydeg = 1,
+                        coordinates_min, coordinates_max,
+                        initial_refinement_level = refinement_level,
+                        periodicity = true)
+    end
+
+    surface_flux = flux_lax_friedrichs
+    basis = LobattoLegendreBasis(3)
+    volume_integral = VolumeIntegralFluxDifferencing(volume_flux)
+    solver = DGSEM(basis, surface_flux, volume_integral)
+
+    semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, solver;
+                                        source_terms)
+
+    tspan = (0.0, 1.0)
+    ode = semidiscretize(semi, tspan)
+
+
+    # SSPRK43 with optimized controller of Ranocha, Dalcin, Parsani,
+    # and Ketcheson (2021)
+    integrator = init(ode, SSPRK43(thread = Trixi.True());
+                      controller = PIDController(0.55, -0.27, 0.05),
+                      abstol = tol, reltol = tol,
+                      ode_default_options()...)
+    sol = solve!(integrator)
+
+    analysis_callback = AnalysisCallback(semi, interval = 0)
+    return analysis_callback(sol)
+end
+
+function convergence_test_2d(refinement_levels = 2:6; kwargs...)
+    ndims = 2
+    data = zeros(length(refinement_levels), 1 + 2 * (ndims + 1))
+
+    for (i, refinement_level) in enumerate(refinement_levels)
+        @info "Convergence test" refinement_level
+        errors = convergence_test_2d_inner(; refinement_level,
+                                             kwargs...)
+        data[i, 1] = refinement_level
+        for j in 1:(ndims + 1)
+            data[i, 2 * j] = errors.l2[j]
+        end
+        if i > 1
+            # Compute EOC
+            for j in 1:(ndims + 1)
+                data[i, 2 * j + 1] = -log(data[i, 2 * j] / data[i-1, 2 * j]) / log(2)
+            end
+        end
+    end
+
+    println(raw"Level & $L^2$ error $w_1$ & EOC $w_1$ & $L^2$ error $w_2$ & EOC $w_2$ & $L^2$ error $w_3$ & EOC $w_3$ \\\\")
+    for i in axes(data, 1)
+        if i == 1
+            @printf("%5d &   \\num{%.2e}  &           &   \\num{%.2e}  &           &   \\num{%.2e}  &           \\\\\n",
+                    Int(data[i, 1]),
+                    data[i, 2],
+                    data[i, 4],
+                    data[i, 6])
+        else
+            @printf("%5d &   \\num{%.2e}  & %9.2f &   \\num{%.2e}  & %9.2f &   \\num{%.2e}  & %9.2f \\\\\n",
+                    Int(data[i, 1]),
+                    data[i, 2], data[i, 3],
+                    data[i, 4], data[i, 5],
+                    data[i, 6], data[i, 7])
+        end
+    end
+
+    return nothing
+end
+
+
+function convergence_test_3d_inner(; refinement_level = 3,
+                                     volume_flux = flux_thein_ranocha,
+                                     MeshType = P4estMesh,
+                                     tol = 1.0e-8)
+    equations = UltraRelativisticEulerEquations3D()
+
+    function initial_condition(x, t, equations::UltraRelativisticEulerEquations3D)
+        p = 2.0 + sin((x[1] + x[2] + x[3]) - sqrt(15) / 4 * t)
+        v = SVector(1, 1, 1) / (2 * sqrt(3))
+        return prim2cons(SVector(v..., p), equations)
+    end
+
+    function source_terms(u, x, t, equations::UltraRelativisticEulerEquations3D)
+        c = cos((x[1] + x[2] + x[3]) - sqrt(15) / 4 * t)
+        s1 = 0.75 * c
+        s2 = s1
+        s3 = s1
+        s4 = 0.0
+        return SVector(s1, s2, s3, s4)
+    end
+
+    coordinates_min = (-1.0, -1.0, -1.0) .* π
+    coordinates_max = (+1.0, +1.0, +1.0) .* π
+    if MeshType === TreeMesh
+        mesh = TreeMesh(coordinates_min, coordinates_max;
+                        initial_refinement_level = refinement_level,
+                        n_cells_max = 10^5,
+                        periodicity = true)
+    else # P4estMesh, T8codeMesh
+        mesh = MeshType((1, 1, 1); polydeg = 1,
+                        coordinates_min, coordinates_max,
+                        initial_refinement_level = refinement_level,
+                        periodicity = true)
+    end
+
+    surface_flux = flux_lax_friedrichs
+    basis = LobattoLegendreBasis(3)
+    volume_integral = VolumeIntegralFluxDifferencing(volume_flux)
+    solver = DGSEM(basis, surface_flux, volume_integral)
+
+    semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, solver;
+                                        source_terms)
+
+    tspan = (0.0, 1.0)
+    ode = semidiscretize(semi, tspan)
+
+
+    # SSPRK43 with optimized controller of Ranocha, Dalcin, Parsani,
+    # and Ketcheson (2021)
+    integrator = init(ode, SSPRK43(thread = Trixi.True());
+                      controller = PIDController(0.55, -0.27, 0.05),
+                      abstol = tol, reltol = tol,
+                      ode_default_options()...)
+    sol = solve!(integrator)
+
+    analysis_callback = AnalysisCallback(semi, interval = 0)
+    return analysis_callback(sol)
+end
+
+function convergence_test_3d(refinement_levels = 2:6; kwargs...)
+    ndims = 3
+    data = zeros(length(refinement_levels), 1 + 2 * (ndims + 1))
+
+    for (i, refinement_level) in enumerate(refinement_levels)
+        @info "Convergence test" refinement_level
+        errors = convergence_test_3d_inner(; refinement_level,
+                                             kwargs...)
+        data[i, 1] = refinement_level
+        for j in 1:(ndims + 1)
+            data[i, 2 * j] = errors.l2[j]
+        end
+        if i > 1
+            # Compute EOC
+            for j in 1:(ndims + 1)
+                data[i, 2 * j + 1] = -log(data[i, 2 * j] / data[i-1, 2 * j]) / log(2)
+            end
+        end
+    end
+
+    println(raw"Level & $L^2$ error $w_1$ & EOC $w_1$ & $L^2$ error $w_2$ & EOC $w_2$ & $L^2$ error $w_3$ & EOC $w_3$ & $L^2$ error $w_4$ & EOC $w_4$ \\\\")
+    for i in axes(data, 1)
+        if i == 1
+            @printf("%5d &   \\num{%.2e}  &           &   \\num{%.2e}  &           &   \\num{%.2e}  &           &   \\num{%.2e}  &           \\\\\n",
+                    Int(data[i, 1]),
+                    data[i, 2],
+                    data[i, 4],
+                    data[i, 6],
+                    data[i, 8])
+        else
+            @printf("%5d &   \\num{%.2e}  & %9.2f &   \\num{%.2e}  & %9.2f &   \\num{%.2e}  & %9.2f &   \\num{%.2e}  & %9.2f \\\\\n",
+                    Int(data[i, 1]),
+                    data[i, 2], data[i, 3],
+                    data[i, 4], data[i, 5],
+                    data[i, 6], data[i, 7],
+                    data[i, 8], data[i, 9])
+        end
+    end
+
+    return nothing
 end
 
 
