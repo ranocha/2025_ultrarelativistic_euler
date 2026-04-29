@@ -6,13 +6,17 @@
 This repository contains information and code to reproduce the results presented in the
 article
 ```bibtex
-@online{thein2025computing,
-  title={{C}omputing Radially-Symmetric Solutions of the
+@article{thein2026computing,
+  title={Computing Radially-Symmetric Solutions of the
          Ultra-Relativistic {E}uler Equations with Entropy-Stable
          Discontinuous {G}alerkin Methods},
   author={Thein, Ferdinand and Ranocha, Hendrik},
-  year={2025},
-  month={09},
+  journal={Journal of Computational Physics},
+  volume={561},
+  year={2026},
+  month={04},
+  pages={114959},
+  doi={10.1016/j.jcp.2026.114959},
   eprint={2508.21427},
   eprinttype={arxiv},
   eprintclass={math.NA}
